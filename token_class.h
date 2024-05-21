@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 
 class Token {
    private:
@@ -6,7 +7,9 @@ class Token {
     float floatValue;
     std::string stringValue;
     std::string tokenClass;
+    std::string variableType;
     // token class is either int, float, operator, command, or variable
+    // variableType is either int, float, or undeclared
 
    public:
     // call these constructors to create a token
@@ -24,12 +27,23 @@ class Token {
         if (init == "EXIT" || init == "BEG" || init == "FLOAT") {
             stringValue = init;
             tokenClass = "Command";
-        } else if (init == "+" || init == "-" || init == "*" || init == "/" || init == "%") {
+        } else if (init == "+" || init == "-" || init == "*" || init == "/" || init == "%" || init == "=") {
             stringValue = init;
             tokenClass = "Operator";
         } else {
             stringValue = init;
             tokenClass = "Variable";
+            variableType = "Undeclared";
         }
+    }
+
+    void declareVar(int value) {
+        intValue = value;
+        variableType = "Integer";
+    }
+
+    void declareVar(float value) {
+        floatValue = value;
+        variableType = "Float";
     }
 };
