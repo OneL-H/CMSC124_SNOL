@@ -1,6 +1,20 @@
 #include <string.h>
 
+#include <stdexcept>
+
 #include "token_class.h"
+
+std::vector<Token> scanner(std::string input_string);
+
+int main() {
+    std::string inp = "";
+    std::cout << "inp";
+    try {
+        std::vector<Token> token_stream1 = scanner("BEG MOMMY TO STOP PRINT ING LMAO");
+    } catch (const std::exception& e) {
+        std::cout << "ERROR CAUGHT: " << e.what() << '\n';
+    }
+}
 
 // returns the four things a character can be
 std::string type_check(char inp) {
@@ -15,7 +29,7 @@ std::string type_check(char inp) {
     } else if (inp == ' ') {
         return "SPACE";
     } else {
-        throw "LEXICAL ERROR: INVALID CHARACTER DETECTED";
+        throw std::runtime_error("LEXICAL ERROR: INVALID CHARACTER DETECTED");
     }
 }
 
@@ -40,7 +54,7 @@ std::vector<Token> scanner(std::string input_string) {
 
     // ERROR CHECK 0: NO STRING
     if (input_string.empty()) {
-        throw "LEXICAL ERROR: NO INPUT STRING";
+        throw std::runtime_error("LEXICAL ERROR: NO INPUT STRING");
     }
 
     // clear string of spaces at start / end
@@ -49,8 +63,8 @@ std::vector<Token> scanner(std::string input_string) {
 
     // ERROR CHECK 1: ALL SPACES
     if (start == -1 || end == -1) {
-        throw "LEXICAL ERROR: NO EXPRESSION DETECTED.";
-    }  // throw error if bad. otherwise generate substring.
+        throw std::runtime_error("LEXICAL ERROR: NO EXPRESSION DETECTED.");
+    }  // throw std::runtime_error( error if bad. otherwise generate substring.
 
     // FIND SUBSTRING WHERE THE START ISN'T JUST SPACES
     input_string = input_string.substr(start, end - start + 1);
@@ -58,12 +72,12 @@ std::vector<Token> scanner(std::string input_string) {
     // ERROR CHECK 2: INVALID STARTING CHARACTERS
     char_type = type_check(input_string.front());
     if (char_type == "POINT" || char_type == "OPERATOR") {
-        throw "SYNTAX ERROR: INVALD STARTING CHARACTER";
+        throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
     }
 
     char_type = type_check(input_string.back());
     if (char_type == "POINT" || char_type == "OPERATOR") {
-        throw "SYNTAX ERROR: INVALD ENDING CHARACTER";
+        throw std::runtime_error("SYNTAX ERROR: INVALD ENDING CHARACTER");
     }
 
     // curr_type: what the scanner assumes is the type of thing its getting.
@@ -76,14 +90,15 @@ std::vector<Token> scanner(std::string input_string) {
     }
 
     std::string buffer = "";
+    buffer += input_string.at(0);
 
     // turns the string into tokens, and throws an error if it doesn't make sense
     int len = input_string.length();
-    for (int pos = 0; pos < len; pos++) {
-        char_type = type_check(input_string[pos]);
+    for (int pos = 1; pos < len; pos++) {
+        char_type = type_check(input_string.at(pos));
 
         if (char_type == "SPACE") {
-            /*
+            
             if(!buffer.empty()){
                 token_stream.push_back(tokenize(buffer, curr_type));
                 buffer = "";
@@ -92,74 +107,73 @@ std::vector<Token> scanner(std::string input_string) {
             continue;
         } else if (curr_type == "INTEGER") {
             if (char_type == "POINT") {
-                buffer += input_string[pos];
+                buffer += input_string.at(pos);
                 curr_type = "FLOAT";  // ACTION 1: add current char and change type
             } else if (char_type == "LETTER") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "STRING";
             } else if (char_type == "OPERATOR") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
             } else if (char_type == "NUMBER") {
-                buffer += input_string[pos];  // ACTION 3: add current char
+                buffer += input_string.at(pos);  // ACTION 3: add current char
             }
         } else if (curr_type == "STRING") {
             if (char_type == "POINT") {
-                throw "LEXICAL ERROR: VARIABLES CANNOT CONTAIN POINTS.";
+                throw std::runtime_error("LEXICAL ERROR: VARIABLES CANNOT CONTAIN POINTS.");
                 // A.B is not valid.
             } else if (char_type == "LETTER" || char_type == "NUMBER") {
-                buffer += input_string[pos];
+                buffer += input_string.at(pos);
                 // will only reach here with LETTER, numbers after first are okay.
             } else if (char_type == "OPERATOR") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "OPERATOR";
             }
         } else if (curr_type == "OPERATOR") {
             if (char_type == "POINT") {
-                throw "LEXICAL ERROR: POINTS CANNOT FOLLOW OPERATORS.";
+                throw std::runtime_error("LEXICAL ERROR: POINTS CANNOT FOLLOW OPERATORS.");
+
+            } else if (char_type == "OPERATOR") {
+                throw std::runtime_error("LEXICAL ERROR: DOUBLED OPERATORS.");
+
             } else if (char_type == "LETTER") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "STRING";  // ACTION 2: tokenize and clear buffer, change type
-            } else if (char_type == "OPERATOR") {
-                throw "LEXICAL ERROR: DOUBLED OPERATORS.";
+
             } else if (char_type == "NUMBER") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "INTEGER";  // ACTION 2: tokenize and clear buffer, change type
             }
         } else if (curr_type == "FLOAT") {
             if (char_type == "POINT") {
-                throw "LEXICAL ERROR: FLOATING POINT NUMBER HAS TWO DECIMAL POINTS.";
+                throw std::runtime_error("LEXICAL ERROR: FLOATING POINT NUMBER HAS TWO DECIMAL POINTS.");
             } else if (char_type == "LETTER") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "STRING";
             } else if (char_type == "OPERATOR") {
                 token_stream.push_back(tokenize(buffer, curr_type));
-                buffer = "" + input_string[pos];
+                buffer.clear();
+                buffer += input_string.at(pos);
                 curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
             } else if (char_type == "NUMBER") {
-                buffer += input_string[pos];  // ACTION 3: add current char
+                buffer += input_string.at(pos);  // ACTION 3: add current char
             }
         }
     }
 
-    return token_stream;
-}
+    token_stream.push_back(tokenize(buffer, curr_type));
 
-int main() {
-    try {
-        std::vector<Token> token_stream1 = scanner("");
-        std::vector<Token> token_stream2 = scanner("SHITFUCK12+BITCHTITS13");
-        std::vector<Token> token_stream3 = scanner("      1203fssadfasd     ");
-        std::vector<Token> token_stream4 = scanner("1 * fuck2 - 23 / 56 % 123");
-        std::vector<Token> token_stream5 = scanner("BEG MOMMY TO STOP PRINT ING LMAO WHAT");
-        std::cout << "okay works?";
-    }catch(std::string error){
-        std::cout << error;
-    }
+    return token_stream;
 }
