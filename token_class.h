@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <variant>
 
 class Token {
    private:
@@ -9,22 +10,25 @@ class Token {
     std::string tokenClass;
     std::string variableType;
     // token class is either int, float, operator, command, or variable
-    // variableType is either int, float, or undeclared
+    // variableType is
+    // is either int, float, or undeclared
 
    public:
     // call these constructors to create a token
     Token(int init) {
         intValue = init;
         tokenClass = "Integer";
+        variableType = "Integer";
     }  // creates an "integer" token
 
     Token(float init) {
         floatValue = init;
         tokenClass = "Float";
+        variableType = "Float";
     }  // creates a float token
 
     Token(std::string init) {
-        if (init == "EXIT" || init == "BEG" || init == "FLOAT") {
+        if (init == "EXIT!" || init == "BEG" || init == "FLOAT") {
             stringValue = init;
             tokenClass = "Command";
         } else if (init == "+" || init == "-" || init == "*" || init == "/" || init == "%" || init == "=") {
@@ -35,6 +39,18 @@ class Token {
             tokenClass = "Variable";
             variableType = "Undeclared";
         }
+    }
+
+    std::string getTokenClass(){
+        return tokenClass;
+    }
+
+    std::string getStringValue(){
+        return stringValue;
+    }
+    
+    std::string getVariableType(){
+        return variableType;
     }
 
     void declareVar(int value) {
