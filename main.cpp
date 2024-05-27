@@ -1,5 +1,7 @@
 #include <string.h>
+
 #include <stdexcept>
+
 #include "token_class.h"
 
 std::string type_check(char inp);
@@ -12,15 +14,15 @@ Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspa
         // float here cause C++ complains if i dont
     } else if (curr_type == "OPERATOR") {
         return Token(inp);
-    } else if (curr_type == "STRING"){
+    } else if (curr_type == "STRING") {
         std::vector<Token>::iterator i;
-        for(i = varspace.begin(); i != varspace.end(); ++i){
-            if((*i).getStringValue() == inp){
-                return *i; // return matching token instead
-            } // check if inp matches stringValue of token in variable space
+        for (i = varspace.begin(); i != varspace.end(); ++i) {
+            if ((*i).getStringValue() == inp) {
+                return *i;  // return matching token instead
+            }  // check if inp matches stringValue of token in variable space
         }
         return Token(inp);
-    }   
+    }
 
     // if control reaches here you know ive fucked up
     return Token(inp);
@@ -77,11 +79,10 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
         char_type = type_check(input_string.at(pos));
 
         if (char_type == "SPACE") {
-            
-            if(!buffer.empty()){
+            if (!buffer.empty()) {
                 token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer = "";
-            } // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY. */
+            }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY. */
 
             continue;
         } else if (curr_type == "INTEGER") {
@@ -171,7 +172,7 @@ int main() {
 
 // returns the four things a character can be
 std::string type_check(char inp) {
-    if (isalpha(inp) || inp == '!') { 
+    if (isalpha(inp) || inp == '!') {
         return "LETTER";
     } else if (isdigit(inp)) {
         return "NUMBER";
@@ -186,61 +187,58 @@ std::string type_check(char inp) {
     }
 }
 
-void exit_snol(){
+void exit_snol() {
     std::cout << "\nInterpreter is now terminated...";
     exit(0);
 }
 
 // prechecker one. identifies type of command
-void identifier_prechecker(std::vector<Token> token_stream){
+void identifier_prechecker(std::vector<Token> token_stream) {
     // CHECK ONE. ITS A COMMAND THING
     std::vector<Token>::iterator iter = token_stream.begin();
-    if((*iter).getTokenClass() == "Command"){
-        if((*iter).getStringValue() == "EXIT!"){
-            if(token_stream.begin() != token_stream.end()){
+    if ((*iter).getTokenClass() == "Command") {
+        if ((*iter).getStringValue() == "EXIT!") {
+            if (token_stream.begin() != token_stream.end()) {
                 throw std::runtime_error("SYNTAX ERROR: INVALID EXIT SYNTAX");
             }
 
             exit_snol();
-        }else if((*iter).getStringValue() == "BEG"){
-            ++iter; // increment iter. its now on the second token
-            if((*iter).getTokenClass() == "Variable" && iter == token_stream.end()){
+        } else if ((*iter).getStringValue() == "BEG") {
+            ++iter;  // increment iter. its now on the second token
+            if ((*iter).getTokenClass() == "Variable" && iter == token_stream.end()) {
                 // check here is (its a variable) AND (its the end)
 
-            }else{
+            } else {
                 throw std::runtime_error("SYNTAX ERROR: BEG SHOULD BE FOLLOWED BY ONE VARIABLE");
             }
-        }else if((*iter).getStringValue() == "PRINT"){
-
+        } else if ((*iter).getStringValue() == "PRINT") {
         }
-    }else if((*iter).getTokenClass() == "Variable"){
+    } else if ((*iter).getTokenClass() == "Variable") {
         ++iter;
-        if((*iter).getTokenClass() == "Operator" && (*iter).getStringValue() == "="){
-
-        }else{
+        if ((*iter).getTokenClass() == "Operator" && (*iter).getStringValue() == "=") {
+        } else {
             throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
         }
     }
 }
 
 // returns true if expression is valid, throws runtime error otheriwse
-bool expr_prechecker(std::vector<Token> token_stream){
-    
+bool expr_prechecker(std::vector<Token> token_stream) {
     // CHECK 1: VALID BEGINNING / ENDING
     Token beg = *token_stream.begin();
     Token end = *token_stream.end();
     std::string beg_class = beg.getTokenClass();
     std::string end_class = beg.getTokenClass();
-    if(!(beg_class == "Integer" || beg_class == "Float" || beg_class == "Variable")){
+    if (!(beg_class == "Integer" || beg_class == "Float" || beg_class == "Variable")) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST BEGIN WITH A VALID OPERAND");
     }
 
-    if(!(end_class == "Integer" || end_class == "Float" || end_class == "Variable")){
+    if (!(end_class == "Integer" || end_class == "Float" || end_class == "Variable")) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
     // precheck to avoid screwing next step
-    if(beg.getVariableType() == "Undeclared"){
+    if (beg.getVariableType() == "Undeclared") {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS INVALID VARIABLE");
     }
 
@@ -248,47 +246,68 @@ bool expr_prechecker(std::vector<Token> token_stream){
     // if there's a float at start all variables must be float, vice versa. divisions can just call a check again
 
     bool expect_operand = true;
-    for(std::vector<Token>::iterator i = token_stream.begin(); i != token_stream.end(); ++i){
-        if(expect_operand){
+    for (std::vector<Token>::iterator i = token_stream.begin(); i != token_stream.end(); ++i) {
+        if (expect_operand) {
             // expect operand. expect integer, float, or variable
-            if(!((*i).getTokenClass() == "Integer" || (*i).getTokenClass() == "Float" || (*i).getTokenClass() == "Variable")){
+            if (!((*i).getTokenClass() == "Integer" || (*i).getTokenClass() == "Float" || (*i).getTokenClass() == "Variable")) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + (*i).getTokenClass();
                 throw std::runtime_error(error_msg);
             }
 
             // operand is undeclared variable
-            if((*i).getVariableType() == "Undeclared"){
+            if ((*i).getVariableType() == "Undeclared") {
                 throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS UNDECLARED VARIABLES");
             }
 
             // operand is of different variable type compared to start
-            if((*i).getVariableType() != expr_type){
+            if ((*i).getVariableType() != expr_type) {
                 throw std::runtime_error("SYNTAX ERROR. SNOL DISALLOWS MIXED VARIABLE TYPES IN EXPRESSION");
             }
-        }else{
+        } else {
             // not an operator
-            if(!((*i).getTokenClass() == "Operator")){
+            if (!((*i).getTokenClass() == "Operator")) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getTokenClass();
                 throw std::runtime_error(error_msg);
             }
 
             // operator is =
-            if(!((*i).getStringValue() == "=")){
+            if (!((*i).getStringValue() == "=")) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getStringValue();
                 throw std::runtime_error(error_msg);
             }
 
             // operator is % and expression is assumed to be float
-            if((*i).getStringValue() == "%" && expr_type == "Float"){
+            if ((*i).getStringValue() == "%" && expr_type == "Float") {
                 throw std::runtime_error("SYNTAX ERROR. MODULO (%) OPERATION IS ONLY ALLOWED BETWEEN INTs");
             }
         }
     }
 
     // i know this check isn't necessary but i am still paranoid
-    if(expect_operand){
+    if (expect_operand) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
     return true;
+}
+
+int_or_float expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
+    // this is a horribly lazy method for expression evaluation because there's
+    // no parentheses in the language description
+
+    // initial push
+    int len = token_stream.size();
+    for (int i = 0; i < len; ++i) {
+        if (token_stream[i].getTokenClass() == "Operator") {
+            if(token_stream[i].getStringValue() == "*"){
+                
+                if(expr_type == "Integer"){
+                    Token temp = Token(token_stream[i-1].getValue().val.int_val * token_stream[i+1].getValue().val.int_val);
+                }else{
+                    Token temp = Token(token_stream[i-1].getValue().val.int_val * token_stream[i+1].getValue().val.int_val);
+                }   
+                // note. will return a int_or_float type
+            }
+        }
+    }
 }

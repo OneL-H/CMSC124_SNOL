@@ -2,6 +2,30 @@
 #include <vector>
 #include <variant>
 
+enum tkn_class{
+    Integer, 
+    Float,
+    Operator,
+    Command,
+    Variable   
+};
+
+enum variable_type{
+    Integer,
+    Float,
+    Undeclared
+};
+
+union u_int_or_float {
+    int int_val;
+    float float_val;
+};
+
+struct int_or_float {
+    u_int_or_float val;
+    variable_type var_type;
+};
+
 class Token {
    private:
     int intValue;
@@ -38,6 +62,26 @@ class Token {
             stringValue = init;
             tokenClass = "Variable";
             variableType = "Undeclared";
+        }
+    }
+
+    int_or_float getValue(){
+        if(variableType == "Integer"){
+            u_int_or_float temp;
+            temp.int_val = intValue;
+
+            int_or_float temp1;
+            temp1.val = temp;
+            temp1.var_type = Integer;
+        }
+
+        if(variableType == "Float"){
+            u_int_or_float temp;
+            temp.int_val = floatValue;
+
+            int_or_float temp1;
+            temp1.val = temp;
+            temp1.var_type = Float;
         }
     }
 
