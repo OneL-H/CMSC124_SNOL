@@ -4,7 +4,27 @@
 
 #include "token_class.h"
 
+Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspace);
 std::string type_check(char inp);
+std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace);
+void exit_snol();
+void identifier_prechecker(std::vector<Token> token_stream);
+bool expr_prechecker(std::vector<Token> token_stream);
+void expression_evaluator(std::vector<Token> token_stream, std::string expr_type);
+
+int main() {
+    std::vector<Token> variable_space;
+
+    std::string inp = "";
+    std::cout << "inp";
+    try {
+        std::vector<Token> token_stream1 = scanner("2 * 3 * 4 * 5", variable_space);
+        expression_evaluator(token_stream1, "Integer");
+    } catch (const std::exception& e) {
+        std::cout << "ERROR CAUGHT: " << e.what() << '\n';
+    }
+}
+
 // returns a token object with correct parameters
 Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspace) {
     if (curr_type == "INTEGER") {
@@ -26,6 +46,23 @@ Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspa
 
     // if control reaches here you know ive fucked up
     return Token(inp);
+}
+
+// returns the four things a character can be
+std::string type_check(char inp) {
+    if (isalpha(inp) || inp == '!') {
+        return "LETTER";
+    } else if (isdigit(inp)) {
+        return "NUMBER";
+    } else if (inp == '.') {
+        return "POINT";
+    } else if (inp == '=' || inp == '+' || inp == '-' || inp == '*' || inp == '/' || inp == '%') {
+        return "OPERATOR";
+    } else if (inp == ' ') {
+        return "SPACE";
+    } else {
+        throw std::runtime_error("LEXICAL ERROR: INVALID CHARACTER DETECTED");
+    }
 }
 
 // scanner routine. string to token stream converter
@@ -83,19 +120,18 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
                 token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer = "";
             }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY. */
-
             continue;
         } else if (curr_type == "INTEGER") {
             if (char_type == "POINT") {
                 buffer += input_string.at(pos);
                 curr_type = "FLOAT";  // ACTION 1: add current char and change type
             } else if (char_type == "LETTER") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "STRING";
             } else if (char_type == "OPERATOR") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
@@ -110,7 +146,7 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
                 buffer += input_string.at(pos);
                 // will only reach here with LETTER, numbers after first are okay.
             } else if (char_type == "OPERATOR") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "OPERATOR";
@@ -123,13 +159,13 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
                 throw std::runtime_error("LEXICAL ERROR: DOUBLED OPERATORS.");
 
             } else if (char_type == "LETTER") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "STRING";  // ACTION 2: tokenize and clear buffer, change type
 
             } else if (char_type == "NUMBER") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "INTEGER";  // ACTION 2: tokenize and clear buffer, change type
@@ -138,12 +174,12 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
             if (char_type == "POINT") {
                 throw std::runtime_error("LEXICAL ERROR: FLOATING POINT NUMBER HAS TWO DECIMAL POINTS.");
             } else if (char_type == "LETTER") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "STRING";
             } else if (char_type == "OPERATOR") {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
                 curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
@@ -156,35 +192,6 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
     token_stream.push_back(tokenize(buffer, curr_type, varspace));
 
     return token_stream;
-}
-
-int main() {
-    std::vector<Token> variable_space;
-
-    std::string inp = "";
-    std::cout << "inp";
-    try {
-        std::vector<Token> token_stream1 = scanner("1.2.3.4.5", variable_space);
-    } catch (const std::exception& e) {
-        std::cout << "ERROR CAUGHT: " << e.what() << '\n';
-    }
-}
-
-// returns the four things a character can be
-std::string type_check(char inp) {
-    if (isalpha(inp) || inp == '!') {
-        return "LETTER";
-    } else if (isdigit(inp)) {
-        return "NUMBER";
-    } else if (inp == '.') {
-        return "POINT";
-    } else if (inp == '=' || inp == '+' || inp == '-' || inp == '*' || inp == '/' || inp == '%') {
-        return "OPERATOR";
-    } else if (inp == ' ') {
-        return "SPACE";
-    } else {
-        throw std::runtime_error("LEXICAL ERROR: INVALID CHARACTER DETECTED");
-    }
 }
 
 void exit_snol() {
@@ -291,22 +298,85 @@ bool expr_prechecker(std::vector<Token> token_stream) {
     return true;
 }
 
-int_or_float expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
+void expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
     // this is a horribly lazy method for expression evaluation because there's
     // no parentheses in the language description
 
     // initial push
     int len = token_stream.size();
-    for (int i = 0; i < len; ++i) {
-        if (token_stream[i].getTokenClass() == "Operator") {
-            if(token_stream[i].getStringValue() == "*"){
-                
-                if(expr_type == "Integer"){
-                    Token temp = Token(token_stream[i-1].getValue().val.int_val * token_stream[i+1].getValue().val.int_val);
-                }else{
-                    Token temp = Token(token_stream[i-1].getValue().val.int_val * token_stream[i+1].getValue().val.int_val);
-                }   
-                // note. will return a int_or_float type
+    std::vector<Token>::iterator iter_base = token_stream.begin();
+    for (; iter_base != token_stream.end(); ++iter_base) {
+        if ((*iter_base).getTokenClass() == "Operator") {
+            if ((*iter_base).getStringValue() == "*") {
+                if (expr_type == "Integer") {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.int_val * (*(iter_base + 1)).getValue().val.int_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                } else {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.float_val * (*(iter_base + 1)).getValue().val.float_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                }
+            } else if ((*iter_base).getStringValue() == "/") {
+                if (expr_type == "Integer") {  // SPECIAL CASE. MUST PERFORM RECHECK.
+                    int a = (*(iter_base - 1)).getValue().val.int_val;
+                    int b = (*(iter_base + 1)).getValue().val.int_val;
+                    Token temp = Token(a / b);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                    if (a % b != 0) {
+                        expr_prechecker(token_stream);
+                        // throws an error if invalid, something something
+                    }
+                } else {  // IF INTEGER DIVISION AND ITS NOT WHOLE RESULTS IN BAD
+                    Token temp = Token((*(iter_base - 1)).getValue().val.float_val / (*(iter_base + 1)).getValue().val.float_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                }
+            } else if ((*iter_base).getStringValue() == "%") {
+                if (expr_type == "Integer") {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.int_val % (*(iter_base + 1)).getValue().val.int_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                } else {
+                    throw std::runtime_error("EXPRESSION ERROR: MODULO PERFORMED ON NON-WHOLE NUMBERS");
+                }
+            }
+        }
+    }
+
+    iter_base = token_stream.begin();
+    for (; iter_base != token_stream.end(); ++iter_base) {
+        if ((*iter_base).getTokenClass() == "Operator") {
+            if ((*iter_base).getStringValue() == "+") {
+                if (expr_type == "Integer") {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.int_val + (*(iter_base + 1)).getValue().val.int_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                } else {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.float_val + (*(iter_base + 1)).getValue().val.float_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                }
+            } else if ((*iter_base).getStringValue() == "-") {
+                if (expr_type == "Integer") {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.int_val - (*(iter_base + 1)).getValue().val.int_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                } else {
+                    Token temp = Token((*(iter_base - 1)).getValue().val.float_val - (*(iter_base + 1)).getValue().val.float_val);
+                    token_stream.erase(iter_base - 1, iter_base + 2);
+                    token_stream.insert(iter_base - 1, temp);
+                    iter_base -= 2;
+                }
             }
         }
     }

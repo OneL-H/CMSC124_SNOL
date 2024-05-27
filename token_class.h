@@ -3,16 +3,16 @@
 #include <variant>
 
 enum tkn_class{
-    Integer, 
-    Float,
-    Operator,
-    Command,
-    Variable   
+    tkn_Integer, 
+    tkn_Float,
+    tkn_Operator,
+    tkn_Command,
+    tkn_Variable   
 };
 
 enum variable_type{
-    Integer,
-    Float,
+    var_Integer,
+    var_Float,
     Undeclared
 };
 
@@ -72,7 +72,9 @@ class Token {
 
             int_or_float temp1;
             temp1.val = temp;
-            temp1.var_type = Integer;
+            temp1.var_type = var_Integer;
+
+            return temp1;
         }
 
         if(variableType == "Float"){
@@ -81,7 +83,9 @@ class Token {
 
             int_or_float temp1;
             temp1.val = temp;
-            temp1.var_type = Float;
+            temp1.var_type = var_Float;
+
+            return temp1;
         }
     }
 
