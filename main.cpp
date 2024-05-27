@@ -10,7 +10,7 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace
 void exit_snol();
 void identifier_prechecker(std::vector<Token> token_stream);
 bool expr_prechecker(std::vector<Token> token_stream);
-void expression_evaluator(std::vector<Token> token_stream, std::string expr_type);
+Token expression_evaluator(std::vector<Token> token_stream, std::string expr_type);
 
 int main() {
     std::vector<Token> variable_space;
@@ -26,7 +26,7 @@ int main() {
 }
 
 // returns a token object with correct parameters
-Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspace) {
+Token tokenize(std::string inp, std::string curr_type, std::vector<Token>* varspace) {
     if (curr_type == "INTEGER") {
         return Token(atoi(inp.c_str()));
     } else if (curr_type == "FLOAT") {
@@ -36,7 +36,7 @@ Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspa
         return Token(inp);
     } else if (curr_type == "STRING") {
         std::vector<Token>::iterator i;
-        for (i = varspace.begin(); i != varspace.end(); ++i) {
+        for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
             if ((*i).getStringValue() == inp) {
                 return *i;  // return matching token instead
             }  // check if inp matches stringValue of token in variable space
@@ -66,7 +66,7 @@ std::string type_check(char inp) {
 }
 
 // scanner routine. string to token stream converter
-std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace) {
+std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspace) {
     std::vector<Token> token_stream;
     std::string char_type;
 
@@ -199,26 +199,46 @@ void exit_snol() {
     exit(0);
 }
 
-// prechecker one. identifies type of command
-void identifier_prechecker(std::vector<Token> token_stream) {
+void variable_assignment(Token* var, Token result){
+    if(result.getTokenClass() == "Integer"){
+        var->declareVar(result.getValue().val.int_val);
+    }else if(result.getTokenClass() == "Float"){
+        var->declareVar(result.getValue().val.float_val);
+    }else{
+        throw std::runtime_error("VARIABLE ASSIGNMENT: INVALID INPUT");
+    }
+}
+
+// identifies command type and proceeds with execution.
+// required variable space to be passed by reference, since we'll be changing it.
+void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* variable_space) {
     // CHECK ONE. ITS A COMMAND THING
     std::vector<Token>::iterator iter = token_stream.begin();
-    if ((*iter).getTokenClass() == "Command") {
-        if ((*iter).getStringValue() == "EXIT!") {
+    if ((*iter).getTokenClass() == "Command") { // PROCESSING COMMANDS.
+        if ((*iter).getStringValue() == "EXIT!") { // COMMAND: EXIT!
             if (token_stream.begin() != token_stream.end()) {
                 throw std::runtime_error("SYNTAX ERROR: INVALID EXIT SYNTAX");
             }
 
             exit_snol();
-        } else if ((*iter).getStringValue() == "BEG") {
+        } else if ((*iter).getStringValue() == "BEG") { // COMMAND: BEG
             ++iter;  // increment iter. its now on the second token
             if ((*iter).getTokenClass() == "Variable" && iter == token_stream.end()) {
                 // check here is (its a variable) AND (its the end)
+                std::string inp;
 
+                std::getline(std::cin, inp);
+
+                tokenize()
             } else {
                 throw std::runtime_error("SYNTAX ERROR: BEG SHOULD BE FOLLOWED BY ONE VARIABLE");
             }
         } else if ((*iter).getStringValue() == "PRINT") {
+            std::vector<Token> temp_token_stream;
+                ++iter;
+                for(; iter != token_stream.end(); ++iter){
+                    temp_token_stream.push_back(*iter);
+            }  
         }
     } else if ((*iter).getTokenClass() == "Variable") {
         ++iter;
@@ -230,7 +250,7 @@ void identifier_prechecker(std::vector<Token> token_stream) {
 }
 
 // returns true if expression is valid, throws runtime error otheriwse
-bool expr_prechecker(std::vector<Token> token_stream) {
+bool expr_prechecker(std::vector<Token>::iterator token_stream) {
     // CHECK 1: VALID BEGINNING / ENDING
     Token beg = *token_stream.begin();
     Token end = *token_stream.end();
@@ -298,7 +318,7 @@ bool expr_prechecker(std::vector<Token> token_stream) {
     return true;
 }
 
-void expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
+Token expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
     // this is a horribly lazy method for expression evaluation because there's
     // no parentheses in the language description
 
@@ -379,5 +399,11 @@ void expression_evaluator(std::vector<Token> token_stream, std::string expr_type
                 }
             }
         }
+    }
+
+    if(token_stream.begin() != token_stream.end()){
+        throw std::runtime_error("UNKNOWN ERROR IN EXPRESSION EVALUATION. NO SINGULAR TOKEN RESULT.");
+    }else{
+        return *token_stream.begin();
     }
 }
