@@ -1,19 +1,19 @@
 #include <iostream>
-#include <vector>
 #include <variant>
+#include <vector>
 
-enum tkn_class{
-    tkn_Integer, 
+enum token_class {
+    tkn_Integer,
     tkn_Float,
     tkn_Operator,
     tkn_Command,
-    tkn_Variable   
+    tkn_Variable
 };
 
-enum variable_type{
+enum variable_type {
     var_Integer,
     var_Float,
-    Undeclared
+    var_undeclared
 };
 
 union u_int_or_float {
@@ -31,8 +31,8 @@ class Token {
     int intValue;
     float floatValue;
     std::string stringValue;
-    std::string tokenClass;
-    std::string variableType;
+    token_class tokenClass;
+    variable_type variableType;
     // token class is either int, float, operator, command, or variable
     // variableType is
     // is either int, float, or undeclared
@@ -41,32 +41,32 @@ class Token {
     // call these constructors to create a token
     Token(int init) {
         intValue = init;
-        tokenClass = "Integer";
-        variableType = "Integer";
+        tokenClass = tkn_Integer;
+        variableType = var_Integer;
     }  // creates an "integer" token
 
     Token(float init) {
         floatValue = init;
-        tokenClass = "Float";
-        variableType = "Float";
+        tokenClass = tkn_Float;
+        variableType = var_Float;
     }  // creates a float token
 
     Token(std::string init) {
         if (init == "EXIT!" || init == "BEG" || init == "FLOAT") {
             stringValue = init;
-            tokenClass = "Command";
+            tokenClass = tkn_Command;
         } else if (init == "+" || init == "-" || init == "*" || init == "/" || init == "%" || init == "=") {
             stringValue = init;
-            tokenClass = "Operator";
+            tokenClass = tkn_Operator;
         } else {
             stringValue = init;
-            tokenClass = "Variable";
-            variableType = "Undeclared";
+            tokenClass = tkn_Variable;
+            variableType = var_undeclared;
         }
     }
 
-    int_or_float getValue(){
-        if(variableType == "Integer"){
+    int_or_float getValue() {
+        if (variableType == var_Integer) {
             u_int_or_float temp;
             temp.int_val = intValue;
 
@@ -75,9 +75,7 @@ class Token {
             temp1.var_type = var_Integer;
 
             return temp1;
-        }
-
-        if(variableType == "Float"){
+        } else if (variableType == var_Float) {
             u_int_or_float temp;
             temp.int_val = floatValue;
 
@@ -86,28 +84,38 @@ class Token {
             temp1.var_type = var_Float;
 
             return temp1;
+        } else {
+            throw std::runtime_error("ERROR: ATTEMPTING TO ACCESS VALUE OF NONVARIABLE/NONOPERAND");
         }
     }
 
-    std::string getTokenClass(){
+    token_class getTokenClass() {
         return tokenClass;
     }
 
-    std::string getStringValue(){
+    std::string getStringValue() {
         return stringValue;
     }
-    
-    std::string getVariableType(){
+
+    variable_type getVariableType() {
         return variableType;
     }
 
     void declareVar(int value) {
-        intValue = value;
-        variableType = "Integer";
+        if (tokenClass == tkn_Variable) {
+            intValue = value;
+            variableType = var_Integer;
+        } else {
+            intValue = value;
+        }  // hee hee hoo might be bad
     }
 
     void declareVar(float value) {
-        floatValue = value;
-        variableType = "Float";
+        if (tokenClass == tkn_Variable) {
+            floatValue = value;
+            variableType = var_Float;
+        } else {
+            floatValue = value;
+        }
     }
 };

@@ -4,8 +4,23 @@
 
 #include "token_class.h"
 
-Token tokenize(std::string inp, std::string curr_type, std::vector<Token> varspace);
-std::string type_check(char inp);
+enum chr_type{
+    chr_letter,
+    chr_number,
+    chr_point,
+    chr_operator,
+    chr_space
+};
+
+enum token_state{
+    state_integer,
+    state_float,
+    state_string,
+    state_operator
+};
+
+Token tokenize(std::string inp, std::string curr_state, std::vector<Token> varspace);
+chr_type type_check(char inp);
 std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace);
 void exit_snol();
 void identifier_prechecker(std::vector<Token> token_stream);
@@ -26,15 +41,15 @@ int main() {
 }
 
 // returns a token object with correct parameters
-Token tokenize(std::string inp, std::string curr_type, std::vector<Token>* varspace) {
-    if (curr_type == "INTEGER") {
+Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* varspace) {
+    if (curr_state == state_integer) {
         return Token(atoi(inp.c_str()));
-    } else if (curr_type == "FLOAT") {
+    } else if (curr_state == state_float) {
         return Token((float)atof(inp.c_str()));
         // float here cause C++ complains if i dont
-    } else if (curr_type == "OPERATOR") {
+    } else if (curr_state == state_operator) {
         return Token(inp);
-    } else if (curr_type == "STRING") {
+    } else if (curr_state == state_string) {
         std::vector<Token>::iterator i;
         for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
             if ((*i).getStringValue() == inp) {
@@ -49,17 +64,18 @@ Token tokenize(std::string inp, std::string curr_type, std::vector<Token>* varsp
 }
 
 // returns the four things a character can be
-std::string type_check(char inp) {
+
+chr_type type_check(char inp) {
     if (isalpha(inp) || inp == '!') {
-        return "LETTER";
+        return chr_letter;
     } else if (isdigit(inp)) {
-        return "NUMBER";
+        return chr_number;
     } else if (inp == '.') {
-        return "POINT";
+        return chr_point;
     } else if (inp == '=' || inp == '+' || inp == '-' || inp == '*' || inp == '/' || inp == '%') {
-        return "OPERATOR";
+        return chr_operator;
     } else if (inp == ' ') {
-        return "SPACE";
+        return chr_space;
     } else {
         throw std::runtime_error("LEXICAL ERROR: INVALID CHARACTER DETECTED");
     }
@@ -68,7 +84,7 @@ std::string type_check(char inp) {
 // scanner routine. string to token stream converter
 std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspace) {
     std::vector<Token> token_stream;
-    std::string char_type;
+    chr_type char_type;
 
     // ERROR CHECK 0: NO STRING
     if (input_string.empty()) {
@@ -89,22 +105,22 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
 
     // ERROR CHECK 2: INVALID STARTING CHARACTERS
     char_type = type_check(input_string.front());
-    if (char_type == "POINT" || char_type == "OPERATOR") {
+    if (char_type == chr_point || char_type == chr_operator) {
         throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
     }
 
     char_type = type_check(input_string.back());
-    if (char_type == "POINT" || char_type == "OPERATOR") {
+    if (char_type == chr_point || char_type == chr_operator) {
         throw std::runtime_error("SYNTAX ERROR: INVALD ENDING CHARACTER");
     }
 
-    // curr_type: what the scanner assumes is the type of thing its getting.
-    std::string curr_type;
+    // curr_state: what the scanner assumes is the type of thing its getting.
+    token_state curr_state;
 
-    if (char_type == "NUMBER") {
-        curr_type = "INTEGER";
-    } else if (char_type == "LETTER") {
-        curr_type = "STRING";
+    if (char_type == chr_number) {
+        curr_state = state_integer;
+    } else if (char_type == chr_letter) {
+        curr_state = state_string;
     }
 
     std::string buffer = "";
@@ -115,81 +131,81 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     for (int pos = 1; pos < len; pos++) {
         char_type = type_check(input_string.at(pos));
 
-        if (char_type == "SPACE") {
+        if (char_type == chr_space) {
             if (!buffer.empty()) {
-                token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer = "";
             }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY. */
             continue;
-        } else if (curr_type == "INTEGER") {
-            if (char_type == "POINT") {
+        } else if (curr_state == state_integer) {
+            if (char_type == chr_point) {
                 buffer += input_string.at(pos);
-                curr_type = "FLOAT";  // ACTION 1: add current char and change type
-            } else if (char_type == "LETTER") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                curr_state = state_float;  // ACTION 1: add current char and change type
+            } else if (char_type == chr_letter) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "STRING";
-            } else if (char_type == "OPERATOR") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                curr_state = state_string;
+            } else if (char_type == chr_operator) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
-            } else if (char_type == "NUMBER") {
+                curr_state = state_operator;  // ACTION 2: tokenize and clear buffer, change type
+            } else if (char_type == chr_number) {
                 buffer += input_string.at(pos);  // ACTION 3: add current char
             }
-        } else if (curr_type == "STRING") {
-            if (char_type == "POINT") {
+        } else if (curr_state == state_string) {
+            if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: VARIABLES CANNOT CONTAIN POINTS.");
                 // A.B is not valid.
-            } else if (char_type == "LETTER" || char_type == "NUMBER") {
+            } else if (char_type == chr_letter || char_type == chr_number) {
                 buffer += input_string.at(pos);
                 // will only reach here with LETTER, numbers after first are okay.
-            } else if (char_type == "OPERATOR") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+            } else if (char_type == chr_operator) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "OPERATOR";
+                curr_state = state_operator;
             }
-        } else if (curr_type == "OPERATOR") {
-            if (char_type == "POINT") {
+        } else if (curr_state == state_operator) {
+            if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: POINTS CANNOT FOLLOW OPERATORS.");
 
-            } else if (char_type == "OPERATOR") {
+            } else if (char_type == chr_operator) {
                 throw std::runtime_error("LEXICAL ERROR: DOUBLED OPERATORS.");
 
-            } else if (char_type == "LETTER") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+            } else if (char_type == chr_letter) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "STRING";  // ACTION 2: tokenize and clear buffer, change type
+                curr_state = state_string;  // ACTION 2: tokenize and clear buffer, change type
 
-            } else if (char_type == "NUMBER") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+            } else if (char_type == chr_number) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "INTEGER";  // ACTION 2: tokenize and clear buffer, change type
+                curr_state = state_integer;  // ACTION 2: tokenize and clear buffer, change type
             }
-        } else if (curr_type == "FLOAT") {
-            if (char_type == "POINT") {
+        } else if (curr_state == state_float) {
+            if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: FLOATING POINT NUMBER HAS TWO DECIMAL POINTS.");
-            } else if (char_type == "LETTER") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+            } else if (char_type == chr_letter) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "STRING";
-            } else if (char_type == "OPERATOR") {
-                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_type, varspace));
+                curr_state = state_string;
+            } else if (char_type == chr_operator) {
+                if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
                 buffer += input_string.at(pos);
-                curr_type = "OPERATOR";  // ACTION 2: tokenize and clear buffer, change type
-            } else if (char_type == "NUMBER") {
+                curr_state = state_operator;  // ACTION 2: tokenize and clear buffer, change type
+            } else if (char_type == chr_number) {
                 buffer += input_string.at(pos);  // ACTION 3: add current char
             }
         }
     }
 
-    token_stream.push_back(tokenize(buffer, curr_type, varspace));
+    token_stream.push_back(tokenize(buffer, curr_state, varspace));
 
     return token_stream;
 }
@@ -200,9 +216,9 @@ void exit_snol() {
 }
 
 void variable_assignment(Token* var, Token result){
-    if(result.getTokenClass() == "Integer"){
+    if(result.getTokenClass() == tkn_Integer){
         var->declareVar(result.getValue().val.int_val);
-    }else if(result.getTokenClass() == "Float"){
+    }else if(result.getTokenClass() == tkn_Float){
         var->declareVar(result.getValue().val.float_val);
     }else{
         throw std::runtime_error("VARIABLE ASSIGNMENT: INVALID INPUT");
@@ -214,7 +230,7 @@ void variable_assignment(Token* var, Token result){
 void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* variable_space) {
     // CHECK ONE. ITS A COMMAND THING
     std::vector<Token>::iterator iter = token_stream.begin();
-    if ((*iter).getTokenClass() == "Command") { // PROCESSING COMMANDS.
+    if ((*iter).getTokenClass() == tkn_Command) { // PROCESSING COMMANDS.
         if ((*iter).getStringValue() == "EXIT!") { // COMMAND: EXIT!
             if (token_stream.begin() != token_stream.end()) {
                 throw std::runtime_error("SYNTAX ERROR: INVALID EXIT SYNTAX");
@@ -223,13 +239,13 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
             exit_snol();
         } else if ((*iter).getStringValue() == "BEG") { // COMMAND: BEG
             ++iter;  // increment iter. its now on the second token
-            if ((*iter).getTokenClass() == "Variable" && iter == token_stream.end()) {
+            if ((*iter).getTokenClass() == tkn_Variable && iter == token_stream.end()) {
                 // check here is (its a variable) AND (its the end)
                 std::string inp;
 
                 std::getline(std::cin, inp);
 
-                tokenize()
+                tokenize();
             } else {
                 throw std::runtime_error("SYNTAX ERROR: BEG SHOULD BE FOLLOWED BY ONE VARIABLE");
             }
@@ -240,9 +256,9 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                     temp_token_stream.push_back(*iter);
             }  
         }
-    } else if ((*iter).getTokenClass() == "Variable") {
+    } else if ((*iter).getTokenClass() == tkn_Variable) {
         ++iter;
-        if ((*iter).getTokenClass() == "Operator" && (*iter).getStringValue() == "=") {
+        if ((*iter).getTokenClass() == tkn_Operator && (*iter).getStringValue() == "=") {
         } else {
             throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
         }
@@ -250,39 +266,39 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
 }
 
 // returns true if expression is valid, throws runtime error otheriwse
-bool expr_prechecker(std::vector<Token>::iterator token_stream) {
+bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterator token_iterator) {
     // CHECK 1: VALID BEGINNING / ENDING
-    Token beg = *token_stream.begin();
+    Token beg = *token_iterator; // i am smort
     Token end = *token_stream.end();
-    std::string beg_class = beg.getTokenClass();
-    std::string end_class = beg.getTokenClass();
-    if (!(beg_class == "Integer" || beg_class == "Float" || beg_class == "Variable")) {
+    token_class beg_class = beg.getTokenClass();
+    token_class end_class = beg.getTokenClass();
+    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable)) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST BEGIN WITH A VALID OPERAND");
     }
 
-    if (!(end_class == "Integer" || end_class == "Float" || end_class == "Variable")) {
+    if (!(end_class == tkn_Integer || end_class == tkn_Float || end_class == tkn_Variable)) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
     // precheck to avoid screwing next step
-    if (beg.getVariableType() == "Undeclared") {
+    if (beg.getVariableType() == var_undeclared) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS INVALID VARIABLE");
     }
 
-    std::string expr_type = beg.getVariableType();
+    variable_type expr_type = beg.getVariableType();
     // if there's a float at start all variables must be float, vice versa. divisions can just call a check again
 
     bool expect_operand = true;
     for (std::vector<Token>::iterator i = token_stream.begin(); i != token_stream.end(); ++i) {
         if (expect_operand) {
             // expect operand. expect integer, float, or variable
-            if (!((*i).getTokenClass() == "Integer" || (*i).getTokenClass() == "Float" || (*i).getTokenClass() == "Variable")) {
+            if (!((*i).getTokenClass() == tkn_Integer || (*i).getTokenClass() == tkn_Float || (*i).getTokenClass() == tkn_Operator)) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + (*i).getTokenClass();
                 throw std::runtime_error(error_msg);
             }
 
             // operand is undeclared variable
-            if ((*i).getVariableType() == "Undeclared") {
+            if ((*i).getVariableType() == var_undeclared) {
                 throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS UNDECLARED VARIABLES");
             }
 
@@ -292,7 +308,7 @@ bool expr_prechecker(std::vector<Token>::iterator token_stream) {
             }
         } else {
             // not an operator
-            if (!((*i).getTokenClass() == "Operator")) {
+            if (!((*i).getTokenClass() == tkn_Operator)) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getTokenClass();
                 throw std::runtime_error(error_msg);
             }
@@ -304,7 +320,7 @@ bool expr_prechecker(std::vector<Token>::iterator token_stream) {
             }
 
             // operator is % and expression is assumed to be float
-            if ((*i).getStringValue() == "%" && expr_type == "Float") {
+            if ((*i).getStringValue() == "%" && expr_type == var_Float) {
                 throw std::runtime_error("SYNTAX ERROR. MODULO (%) OPERATION IS ONLY ALLOWED BETWEEN INTs");
             }
         }
