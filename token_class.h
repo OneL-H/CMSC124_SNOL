@@ -52,7 +52,7 @@ class Token {
     }  // creates a float token
 
     Token(std::string init) {
-        if (init == "EXIT!" || init == "BEG" || init == "FLOAT") {
+        if (init == "EXIT!" || init == "BEG" || init == "PRINT") {
             stringValue = init;
             tokenClass = tkn_Command;
         } else if (init == "+" || init == "-" || init == "*" || init == "/" || init == "%" || init == "=") {

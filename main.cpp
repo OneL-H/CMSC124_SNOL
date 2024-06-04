@@ -4,7 +4,7 @@
 
 #include "token_class.h"
 
-enum chr_type{
+enum chr_type {
     chr_letter,
     chr_number,
     chr_point,
@@ -12,31 +12,37 @@ enum chr_type{
     chr_space
 };
 
-enum token_state{
+enum token_state {
     state_integer,
     state_float,
     state_string,
-    state_operator
+    state_operator,
+    state_no_state
 };
 
-Token tokenize(std::string inp, std::string curr_state, std::vector<Token> varspace);
+Token tokenize(std::string inp, std::string curr_state, std::vector<Token>* varspace);
 chr_type type_check(char inp);
-std::vector<Token> scanner(std::string input_string, std::vector<Token> varspace);
+std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspace);
 void exit_snol();
-void identifier_prechecker(std::vector<Token> token_stream);
-bool expr_prechecker(std::vector<Token> token_stream);
-Token expression_evaluator(std::vector<Token> token_stream, std::string expr_type);
+void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* variable_space);
+variable_type expr_prechecker(std::vector<Token> token_stream);
+Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type);
 
 int main() {
     std::vector<Token> variable_space;
 
     std::string inp = "";
     std::cout << "inp";
-    try {
-        std::vector<Token> token_stream1 = scanner("2 * 3 * 4 * 5", variable_space);
-        expression_evaluator(token_stream1, "Integer");
-    } catch (const std::exception& e) {
-        std::cout << "ERROR CAUGHT: " << e.what() << '\n';
+    while (true) {
+        std::string inp;
+        std::cout << "\n\nREQUESTING INPUT: ";
+        std::getline(std::cin, inp);
+        try {
+            std::vector<Token> token_stream1 = scanner(inp, &variable_space);
+            identifier_prechecker(token_stream1, &variable_space);
+        } catch (const std::exception& e) {
+            std::cout << "SNOL> ERROR CAUGHT - " << e.what() << '\n';
+        }
     }
 }
 
@@ -104,14 +110,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     input_string = input_string.substr(start, end - start + 1);
 
     // ERROR CHECK 2: INVALID STARTING CHARACTERS
-    char_type = type_check(input_string.front());
-    if (char_type == chr_point || char_type == chr_operator) {
-        throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
-    }
-
     char_type = type_check(input_string.back());
     if (char_type == chr_point || char_type == chr_operator) {
         throw std::runtime_error("SYNTAX ERROR: INVALD ENDING CHARACTER");
+    }
+
+    char_type = type_check(input_string.front());
+    if (char_type == chr_point || char_type == chr_operator) {
+        throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
     }
 
     // curr_state: what the scanner assumes is the type of thing its getting.
@@ -131,11 +137,27 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     for (int pos = 1; pos < len; pos++) {
         char_type = type_check(input_string.at(pos));
 
-        if (char_type == chr_space) {
+        if (curr_state == state_no_state) {
+            buffer += input_string.at(pos);
+            if(char_type == chr_letter){
+                curr_state = state_string;
+            } else if (char_type == chr_number){
+                curr_state = state_integer;
+            } else if (char_type == chr_operator){
+                curr_state = state_operator;
+            } else if (char_type == chr_point){
+                throw std::runtime_error("LEXICAL ERROR: LONE POINT DETECTED");
+            } else if (char_type == chr_space){
+                continue;
+            }else{
+                throw std::runtime_error("LEXICAL ERROR: UNKNOWN ERROR OCCURED");
+            }
+        } else if (char_type == chr_space) {
             if (!buffer.empty()) {
                 token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer = "";
-            }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY. */
+                curr_state = state_no_state;
+            }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY.
             continue;
         } else if (curr_state == state_integer) {
             if (char_type == chr_point) {
@@ -215,12 +237,12 @@ void exit_snol() {
     exit(0);
 }
 
-void variable_assignment(Token* var, Token result){
-    if(result.getTokenClass() == tkn_Integer){
+void variable_assignment(Token* var, Token result) {
+    if (result.getTokenClass() == tkn_Integer) {
         var->declareVar(result.getValue().val.int_val);
-    }else if(result.getTokenClass() == tkn_Float){
+    } else if (result.getTokenClass() == tkn_Float) {
         var->declareVar(result.getValue().val.float_val);
-    }else{
+    } else {
         throw std::runtime_error("VARIABLE ASSIGNMENT: INVALID INPUT");
     }
 }
@@ -228,47 +250,83 @@ void variable_assignment(Token* var, Token result){
 // identifies command type and proceeds with execution.
 // required variable space to be passed by reference, since we'll be changing it.
 void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* variable_space) {
+    // FIVE CASES:
+    // COMMAND - EXIT
+    // COMMAND - BEG
+    // COMMAND - PRINT
+    // VAR = EXPR
+    // EXPR
+
     // CHECK ONE. ITS A COMMAND THING
     std::vector<Token>::iterator iter = token_stream.begin();
-    if ((*iter).getTokenClass() == tkn_Command) { // PROCESSING COMMANDS.
-        if ((*iter).getStringValue() == "EXIT!") { // COMMAND: EXIT!
+    if ((*iter).getTokenClass() == tkn_Command) {   // PROCESSING COMMANDS.
+        if ((*iter).getStringValue() == "EXIT!") {  // COMMAND: EXIT!
             if (token_stream.begin() != token_stream.end()) {
                 throw std::runtime_error("SYNTAX ERROR: INVALID EXIT SYNTAX");
             }
 
             exit_snol();
-        } else if ((*iter).getStringValue() == "BEG") { // COMMAND: BEG
-            ++iter;  // increment iter. its now on the second token
+        } else if ((*iter).getStringValue() == "BEG") {  // COMMAND: BEG
+            ++iter;                                      // increment iter. its now on the second token
             if ((*iter).getTokenClass() == tkn_Variable && iter == token_stream.end()) {
                 // check here is (its a variable) AND (its the end)
+
                 std::string inp;
-
+                std::cout << "SNOL> Please enter value for [" << (*iter).getStringValue() << "]:\nInput: ";
                 std::getline(std::cin, inp);
+                std::vector<Token> temp_vec = scanner(inp, variable_space);
 
-                tokenize();
+                if (temp_vec.size() != 1) {
+                    throw std::runtime_error("INPUT ERROR: INVALID INPUT SIZE");
+                }
+
+                if (temp_vec[0].getTokenClass() != tkn_Float && temp_vec[0].getTokenClass() != tkn_Integer) {
+                    throw std::runtime_error("INPUT ERROR: INVALID INPUT");
+                }
+
+                variable_assignment(&(*iter), temp_vec[0]);
+                // this doesn't cause C++ to scream so im assuming this cursed syntax works
+
             } else {
                 throw std::runtime_error("SYNTAX ERROR: BEG SHOULD BE FOLLOWED BY ONE VARIABLE");
             }
-        } else if ((*iter).getStringValue() == "PRINT") {
+        } else if ((*iter).getStringValue() == "PRINT") {  // COMMAND: PRINT
+            // creates a new temp token stream
             std::vector<Token> temp_token_stream;
-                ++iter;
-                for(; iter != token_stream.end(); ++iter){
-                    temp_token_stream.push_back(*iter);
-            }  
+            ++iter;
+            for (; iter != token_stream.end(); ++iter) {
+                temp_token_stream.push_back(*iter);
+            }
+
+            expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream));
         }
     } else if ((*iter).getTokenClass() == tkn_Variable) {
         ++iter;
         if ((*iter).getTokenClass() == tkn_Operator && (*iter).getStringValue() == "=") {
+            Token* token_to_assign_ptr = &(*iter);  // dereference and find address.
+            ++iter;
+            std::vector<Token> temp_token_stream;
+            for (; iter != token_stream.end(); ++iter) {
+                temp_token_stream.push_back(*iter);
+            }
+            variable_assignment(token_to_assign_ptr, expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream)));
         } else {
             throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
         }
+    } else {
+        ++iter;
+        std::vector<Token> temp_token_stream;
+        for (; iter != token_stream.end(); ++iter) {
+            temp_token_stream.push_back(*iter);
+        }
+        expr_prechecker(temp_token_stream);
     }
 }
 
-// returns true if expression is valid, throws runtime error otheriwse
-bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterator token_iterator) {
+// returns a variable type if okay, throws error otherwise
+variable_type expr_prechecker(std::vector<Token> token_stream) {
     // CHECK 1: VALID BEGINNING / ENDING
-    Token beg = *token_iterator; // i am smort
+    Token beg = *token_stream.begin();  // i am smort
     Token end = *token_stream.end();
     token_class beg_class = beg.getTokenClass();
     token_class end_class = beg.getTokenClass();
@@ -281,7 +339,7 @@ bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterat
     }
 
     // precheck to avoid screwing next step
-    if (beg.getVariableType() == var_undeclared) {
+    if (beg.getTokenClass() == tkn_Variable && beg.getVariableType() == var_undeclared) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS INVALID VARIABLE");
     }
 
@@ -314,7 +372,7 @@ bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterat
             }
 
             // operator is =
-            if (!((*i).getStringValue() == "=")) {
+            if ((*i).getStringValue() == "=") {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getStringValue();
                 throw std::runtime_error(error_msg);
             }
@@ -324,6 +382,7 @@ bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterat
                 throw std::runtime_error("SYNTAX ERROR. MODULO (%) OPERATION IS ONLY ALLOWED BETWEEN INTs");
             }
         }
+        expect_operand = !expect_operand; // flip scritp
     }
 
     // i know this check isn't necessary but i am still paranoid
@@ -331,10 +390,11 @@ bool expr_prechecker(std::vector<Token> token_stream, std::vector<Token>::iterat
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
-    return true;
+    return expr_type;
 }
 
-Token expression_evaluator(std::vector<Token> token_stream, std::string expr_type) {
+// evaluates a valid token stream
+Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type) {
     // this is a horribly lazy method for expression evaluation because there's
     // no parentheses in the language description
 
@@ -342,9 +402,9 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
     int len = token_stream.size();
     std::vector<Token>::iterator iter_base = token_stream.begin();
     for (; iter_base != token_stream.end(); ++iter_base) {
-        if ((*iter_base).getTokenClass() == "Operator") {
+        if ((*iter_base).getTokenClass() == tkn_Operator) {
             if ((*iter_base).getStringValue() == "*") {
-                if (expr_type == "Integer") {
+                if (expr_type == var_Integer) {
                     Token temp = Token((*(iter_base - 1)).getValue().val.int_val * (*(iter_base + 1)).getValue().val.int_val);
                     token_stream.erase(iter_base - 1, iter_base + 2);
                     token_stream.insert(iter_base - 1, temp);
@@ -356,7 +416,7 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
                     iter_base -= 2;
                 }
             } else if ((*iter_base).getStringValue() == "/") {
-                if (expr_type == "Integer") {  // SPECIAL CASE. MUST PERFORM RECHECK.
+                if (expr_type == var_Integer) {  // SPECIAL CASE. MUST PERFORM RECHECK.
                     int a = (*(iter_base - 1)).getValue().val.int_val;
                     int b = (*(iter_base + 1)).getValue().val.int_val;
                     Token temp = Token(a / b);
@@ -374,7 +434,7 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
                     iter_base -= 2;
                 }
             } else if ((*iter_base).getStringValue() == "%") {
-                if (expr_type == "Integer") {
+                if (expr_type == var_Integer) {
                     Token temp = Token((*(iter_base - 1)).getValue().val.int_val % (*(iter_base + 1)).getValue().val.int_val);
                     token_stream.erase(iter_base - 1, iter_base + 2);
                     token_stream.insert(iter_base - 1, temp);
@@ -388,9 +448,9 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
 
     iter_base = token_stream.begin();
     for (; iter_base != token_stream.end(); ++iter_base) {
-        if ((*iter_base).getTokenClass() == "Operator") {
+        if ((*iter_base).getTokenClass() == tkn_Operator) {
             if ((*iter_base).getStringValue() == "+") {
-                if (expr_type == "Integer") {
+                if (expr_type == var_Integer) {
                     Token temp = Token((*(iter_base - 1)).getValue().val.int_val + (*(iter_base + 1)).getValue().val.int_val);
                     token_stream.erase(iter_base - 1, iter_base + 2);
                     token_stream.insert(iter_base - 1, temp);
@@ -402,7 +462,7 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
                     iter_base -= 2;
                 }
             } else if ((*iter_base).getStringValue() == "-") {
-                if (expr_type == "Integer") {
+                if (expr_type == var_Integer) {
                     Token temp = Token((*(iter_base - 1)).getValue().val.int_val - (*(iter_base + 1)).getValue().val.int_val);
                     token_stream.erase(iter_base - 1, iter_base + 2);
                     token_stream.insert(iter_base - 1, temp);
@@ -417,9 +477,9 @@ Token expression_evaluator(std::vector<Token> token_stream, std::string expr_typ
         }
     }
 
-    if(token_stream.begin() != token_stream.end()){
+    if (token_stream.size() != 1) {
         throw std::runtime_error("UNKNOWN ERROR IN EXPRESSION EVALUATION. NO SINGULAR TOKEN RESULT.");
-    }else{
+    } else {
         return *token_stream.begin();
     }
 }
