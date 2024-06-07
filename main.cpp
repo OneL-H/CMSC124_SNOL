@@ -156,8 +156,9 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     if (char_type == chr_point || char_type == chr_operator) {
         if((char_type == chr_operator && input_string.front() == '-')){
             curr_state = state_negative;   
+        }else{
+            throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
         }
-        throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
     }
 
     // curr_state: what the scanner assumes is the type of thing its getting.
