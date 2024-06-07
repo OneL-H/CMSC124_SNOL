@@ -31,15 +31,13 @@ Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_t
 int main() {
     std::vector<Token> variable_space;
 
-    std::string inp = "";
-    std::cout << "inp";
     while (true) {
         std::string inp;
         std::cout << "\n\nREQUESTING INPUT: ";
         std::getline(std::cin, inp);
         try {
-            std::vector<Token> token_stream1 = scanner(inp, &variable_space);
-            identifier_prechecker(token_stream1, &variable_space);
+            std::vector<Token> token_stream1 = scanner(inp, *variable_space);
+            identifier_prechecker(token_stream1, *variable_space);
         } catch (const std::exception& e) {
             std::cout << "SNOL> ERROR CAUGHT - " << e.what() << '\n';
         }
@@ -261,14 +259,15 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
     std::vector<Token>::iterator iter = token_stream.begin();
     if ((*iter).getTokenClass() == tkn_Command) {   // PROCESSING COMMANDS.
         if ((*iter).getStringValue() == "EXIT!") {  // COMMAND: EXIT!
-            if (token_stream.begin() != token_stream.end()) {
+            if (token_stream.size() != 1) {
                 throw std::runtime_error("SYNTAX ERROR: INVALID EXIT SYNTAX");
             }
 
             exit_snol();
         } else if ((*iter).getStringValue() == "BEG") {  // COMMAND: BEG
-            ++iter;                                      // increment iter. its now on the second token
-            if ((*iter).getTokenClass() == tkn_Variable && iter == token_stream.end()) {
+            ++iter;                                      // increment iter. its now on the second to
+            std::cout << token_stream.size();
+            if ((*iter).getTokenClass() == tkn_Variable && token_stream.size() == 2) {
                 // check here is (its a variable) AND (its the end)
 
                 std::string inp;
@@ -284,6 +283,10 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                     throw std::runtime_error("INPUT ERROR: INVALID INPUT");
                 }
 
+                if((*iter).getVariableType() == var_undeclared){
+                    (*variable_space).push_back(*iter);
+                } // undeclared variable, push to variable space
+
                 variable_assignment(&(*iter), temp_vec[0]);
                 // this doesn't cause C++ to scream so im assuming this cursed syntax works
 
@@ -291,14 +294,33 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                 throw std::runtime_error("SYNTAX ERROR: BEG SHOULD BE FOLLOWED BY ONE VARIABLE");
             }
         } else if ((*iter).getStringValue() == "PRINT") {  // COMMAND: PRINT
-            // creates a new temp token stream
-            std::vector<Token> temp_token_stream;
+            // only accepts literals / variables
             ++iter;
-            for (; iter != token_stream.end(); ++iter) {
-                temp_token_stream.push_back(*iter);
+            if(token_stream.size() != 2){
+                throw std::runtime_error("SYNTAX ERROR: PRINT MUST BE FOLLOWED BY ONLY ONE VARIABLE/LITERAL");
             }
 
-            expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream));
+            token_class iter_token_class = (*iter).getTokenClass();
+            variable_type iter_variable_type = (*iter).getVariableType();
+            if(iter_token_class == tkn_Integer){
+                int iter_value = (*iter).getValue().val.int_val;
+                std::cout << "SNOL> [" << iter_value << "] = " << iter_value; 
+            }else if(iter_token_class == tkn_Float){
+                float iter_value = (*iter).getValue().val.float_val;
+                std::cout << "SNOL> [" << iter_value << "] = " << iter_value; 
+            }else if(iter_token_class == tkn_Variable){
+                if(iter_variable_type == var_undeclared){
+                    throw std::runtime_error("SYNTAX ERROR: VARIABLE IN PRINT IS UNDECLARED");
+                }else if(iter_variable_type == var_Integer){
+                    float iter_value = (*iter).getValue().val.int_val;
+                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value; 
+                }else if(iter_variable_type == var_Float){
+                    float iter_value = (*iter).getValue().val.float_val;
+                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value; 
+                }
+            }else{
+                throw std::runtime_error("SYNTAX ERROR: DISALLOWED TOKEN TYPE AFTER PRINT COMMAND");
+            }
         }
     } else if ((*iter).getTokenClass() == tkn_Variable) {
         ++iter;
