@@ -637,6 +637,7 @@ Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_t
                 }
             } else if ((*iter_base).getStringValue() == "%") {
                 if (expr_type == var_Integer) {
+                    if((*(iter_base + 1)).getValue().val.int_val == 0) throw std::runtime_error("ARITHMETIC ERROR - MODULO BY ZERO");
                     Token temp = Token((*(iter_base - 1)).getValue().val.int_val % (*(iter_base + 1)).getValue().val.int_val);
                     token_stream.erase(iter_base - 1, iter_base + 2);
                     token_stream.insert(iter_base - 1, temp);
