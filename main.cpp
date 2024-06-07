@@ -491,13 +491,11 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     Token end = token_stream.back();
     token_class beg_class = beg.getTokenClass();
     token_class end_class = end.getTokenClass();
-    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable || beg_class == tkn_Operator)) {
-        throw std::runtime_error("here");
+    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable )) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
     if (!(end_class == tkn_Integer || end_class == tkn_Float || end_class == tkn_Variable)) {
-
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
@@ -513,7 +511,6 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     for (std::vector<Token>::iterator i = token_stream.begin(); i != token_stream.end(); ++i) {
         if (expect_operand) {
             // not integer, not float and not variable, send error
-            //Check whether number is negative
             if (!((*i).getTokenClass() == tkn_Integer || (*i).getTokenClass() == tkn_Float || (*i).getTokenClass() == tkn_Variable)) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + token_class_to_string((*i).getTokenClass());
                 throw std::runtime_error(error_msg);
