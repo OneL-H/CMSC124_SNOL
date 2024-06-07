@@ -29,15 +29,15 @@ variable_type expr_prechecker(std::vector<Token> token_stream);
 Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type);
 
 int main() {
-    std::vector<Token>* variable_space;
+    std::vector<Token> variable_space;
 
     while (true) {
         std::string inp;
         std::cout << "\n\nREQUESTING INPUT: ";
         std::getline(std::cin, inp);
         try {
-            std::vector<Token> token_stream1 = scanner(inp, variable_space);
-            identifier_prechecker(token_stream1, variable_space);
+            std::vector<Token> token_stream1 = scanner(inp, &variable_space);
+            identifier_prechecker(token_stream1, &variable_space);
         } catch (const std::exception& e) {
             std::cout << "SNOL> ERROR CAUGHT - " << e.what() << '\n';
         }
@@ -59,6 +59,8 @@ Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* vars
         if (temp.getTokenClass() == tkn_Command) {
             return temp;
         } else {
+            if((*varspace).empty()) return Token(inp);
+
             std::vector<Token>::iterator i;
             for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
                 if ((*i).getStringValue() == inp) {
@@ -293,6 +295,18 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
 
                 bool var_unassigned = (var_to_assign->getVariableType() == var_undeclared);
 
+                // A FIX. THE TOKEN IS INDEPENDENT TO THE ONE IN THE VARSPACE. SEARCH FOR THE CORRECT ONE TO ASSIGN!
+                if (!var_unassigned) {
+                    std::vector<Token>::iterator varspace_iter = variable_space->begin();
+                    for (; varspace_iter != variable_space->end(); ++varspace_iter) {
+                        // check for matching names
+                        if (var_to_assign->getStringValue() == (*varspace_iter).getStringValue()) {
+                            var_to_assign = &(*varspace_iter);
+                            break;
+                        }  // change the reference of var_to_assign to the one in the varspace
+                    }
+                }
+
                 variable_assignment(var_to_assign, temp_vec[0]);
 
                 if (var_unassigned) {
@@ -325,7 +339,7 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                 if (iter_variable_type == var_undeclared) {
                     throw std::runtime_error("SYNTAX ERROR: VARIABLE IN PRINT IS UNDECLARED");
                 } else if (iter_variable_type == var_Integer) {
-                    float iter_value = (*iter).getValue().val.int_val;
+                    int iter_value = (*iter).getValue().val.int_val;
                     std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value;
                 } else if (iter_variable_type == var_Float) {
                     float iter_value = (*iter).getValue().val.float_val;
@@ -435,7 +449,6 @@ Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_t
     // no parentheses in the language description
 
     // initial push
-    int len = token_stream.size();
     std::vector<Token>::iterator iter_base = token_stream.begin();
     for (; iter_base != token_stream.end(); ++iter_base) {
         if ((*iter_base).getTokenClass() == tkn_Operator) {

@@ -77,7 +77,7 @@ class Token {
             return temp1;
         } else if (variableType == var_Float) {
             u_int_or_float temp;
-            temp.int_val = floatValue;
+            temp.float_val = floatValue;
 
             int_or_float temp1;
             temp1.val = temp;
