@@ -180,7 +180,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     for (int pos = 1; pos < len; pos++) {
         char_type = type_check(input_string.at(pos));
         // Assign state to current char
-        if (char_type == chr_space) {
+        if (curr_state == state_negative) {  // CORNER CASE 1: NEGATIVE NUMBERS
+            if (char_type == chr_number) {          // only good if followed by a number
+                buffer += input_string.at(pos);
+                curr_state = state_integer;
+            } else {
+                throw std::runtime_error("LEXICAL ERROR - INVALID USE OF NEGATIVE SIGN");
+            }
+        }else if (char_type == chr_space) {
             if (!buffer.empty()) {
                 token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer = "";
@@ -210,14 +217,6 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
                 continue;
             } else {
                 throw std::runtime_error("LEXICAL ERROR: UNKNOWN ERROR OCCURED");
-            }
-
-        } else if (curr_state == state_negative) {  // CORNER CASE 1: NEGATIVE NUMBERS
-            if (char_type == chr_number) {          // only good if followed by a number
-                buffer += input_string.at(pos);
-                curr_state = state_integer;
-            } else {
-                throw std::runtime_error("LEXICAL ERROR - INVALID USE OF NEGATIVE SIGN");
             }
         } else if (curr_state == state_integer) {
             // ACTION 1: If alphanumeric add to buffer, and typecast to corresponding state
