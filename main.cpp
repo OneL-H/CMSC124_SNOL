@@ -509,8 +509,8 @@ std::string token_class_to_string(token_class tkn) {
  *   - Modulo (%) operation only allowed for integer expressions.
  *
  * @param token_stream The vector of tokens representing the expression.
- * @return The variable type of the expression (var_Integer or var_Float), determined by the first operand.
- *
+ * @return The variable type of the expression (var_Integer or var_Float), determined by the first operand. (if valid)
+ * @throws an std::runtime error if the expresssion is invalid / fails checks detailed above
  */
 variable_type expr_prechecker(std::vector<Token> token_stream) {
     // CHECK 1: VALID BEGINNING / ENDING
