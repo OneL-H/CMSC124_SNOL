@@ -518,7 +518,7 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     Token end = token_stream.back();
     token_class beg_class = beg.getTokenClass();
     token_class end_class = end.getTokenClass();
-    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable )) {
+    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable)) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST BEGIN WITH A VALID OPERAND");
     }
 
@@ -528,7 +528,7 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
 
     // precheck to avoid screwing next step
     if (beg.getTokenClass() == tkn_Variable && beg.getVariableType() == var_undeclared) {
-        throw std::runtime_error("SYNTAX ERROR. EXPRESSION CONTAINS INVALID VARIABLE");
+        throw std::runtime_error("SYNTAX ERROR. UNRECOGNIZED COMMAND / EXPRESSION CONTAINS UNDECLARED VARIABLE");
     }
 
     variable_type expr_type = beg.getVariableType();
