@@ -382,13 +382,40 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                 (*variable_space).push_back(*var_to_assign);
             }
 
-        } else if ((*iter).getTokenClass() == tkn_Operator) {
-            expr_prechecker(token_stream);
-        } else{
-            throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
+        } else {
+           expr_prechecker(token_stream);
         }
     } else {
         expr_prechecker(token_stream);
+    }
+}
+
+std::string token_class_to_string(token_class tkn){
+    switch (tkn)
+    {
+    case tkn_Command:
+        return "COMMAND";
+        break;
+    
+    case tkn_Float:
+        return "FLOAT";
+        break;
+    
+    case tkn_Integer:
+        return "INTEGER";
+        break;
+
+    case tkn_Operator:
+        return "OPERATOR";
+        break;
+
+    case tkn_Variable:
+        return "VARIABLE";
+        break;
+    
+    default:
+        return "UNKNOWN TOKEN TYPE";
+        break;
     }
 }
 
@@ -420,7 +447,7 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
         if (expect_operand) {
             // not integer, not float and not variable, send error
             if (!((*i).getTokenClass() == tkn_Integer || (*i).getTokenClass() == tkn_Float || (*i).getTokenClass() == tkn_Variable)) {
-                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + (*i).getTokenClass();
+                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + token_class_to_string((*i).getTokenClass());
                 throw std::runtime_error(error_msg);
             }
 
@@ -436,13 +463,13 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
         } else {
             // not an operator
             if (!((*i).getTokenClass() == tkn_Operator)) {
-                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getTokenClass();
+                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + token_class_to_string((*i).getTokenClass());
                 throw std::runtime_error(error_msg);
             }
 
             // operator is =
             if ((*i).getStringValue() == "=") {
-                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + (*i).getStringValue();
+                std::string error_msg = "SYNTAX ERROR. EXPECTED OPERATOR SAW " + token_class_to_string((*i).getTokenClass());
                 throw std::runtime_error(error_msg);
             }
 
