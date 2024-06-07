@@ -29,15 +29,15 @@ variable_type expr_prechecker(std::vector<Token> token_stream);
 Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type);
 
 int main() {
-    std::vector<Token> variable_space;
+    std::vector<Token>* variable_space;
 
     while (true) {
         std::string inp;
         std::cout << "\n\nREQUESTING INPUT: ";
         std::getline(std::cin, inp);
         try {
-            std::vector<Token> token_stream1 = scanner(inp, *variable_space);
-            identifier_prechecker(token_stream1, *variable_space);
+            std::vector<Token> token_stream1 = scanner(inp, variable_space);
+            identifier_prechecker(token_stream1, variable_space);
         } catch (const std::exception& e) {
             std::cout << "SNOL> ERROR CAUGHT - " << e.what() << '\n';
         }
@@ -54,13 +54,19 @@ Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* vars
     } else if (curr_state == state_operator) {
         return Token(inp);
     } else if (curr_state == state_string) {
-        std::vector<Token>::iterator i;
-        for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
-            if ((*i).getStringValue() == inp) {
-                return *i;  // return matching token instead
-            }  // check if inp matches stringValue of token in variable space
+        Token temp = Token(inp);
+
+        if (temp.getTokenClass() == tkn_Command) {
+            return temp;
+        } else {
+            std::vector<Token>::iterator i;
+            for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
+                if ((*i).getStringValue() == inp) {
+                    return *i;  // return matching token instead
+                }  // check if inp matches stringValue of token in variable space
+            }
+            return Token(inp);
         }
-        return Token(inp);
     }
 
     // if control reaches here you know ive fucked up
@@ -137,17 +143,17 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
 
         if (curr_state == state_no_state) {
             buffer += input_string.at(pos);
-            if(char_type == chr_letter){
+            if (char_type == chr_letter) {
                 curr_state = state_string;
-            } else if (char_type == chr_number){
+            } else if (char_type == chr_number) {
                 curr_state = state_integer;
-            } else if (char_type == chr_operator){
+            } else if (char_type == chr_operator) {
                 curr_state = state_operator;
-            } else if (char_type == chr_point){
+            } else if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: LONE POINT DETECTED");
-            } else if (char_type == chr_space){
+            } else if (char_type == chr_space) {
                 continue;
-            }else{
+            } else {
                 throw std::runtime_error("LEXICAL ERROR: UNKNOWN ERROR OCCURED");
             }
         } else if (char_type == chr_space) {
@@ -283,11 +289,18 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                     throw std::runtime_error("INPUT ERROR: INVALID INPUT");
                 }
 
-                if((*iter).getVariableType() == var_undeclared){
-                    (*variable_space).push_back(*iter);
-                } // undeclared variable, push to variable space
+                Token* var_to_assign = &(*iter);
 
-                variable_assignment(&(*iter), temp_vec[0]);
+                bool var_unassigned = (var_to_assign->getVariableType() == var_undeclared);
+
+                variable_assignment(var_to_assign, temp_vec[0]);
+
+                if (var_unassigned) {
+                    (*variable_space).push_back(*var_to_assign);
+                }
+
+                // undeclared variable, push to variable space
+
                 // this doesn't cause C++ to scream so im assuming this cursed syntax works
 
             } else {
@@ -296,29 +309,29 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
         } else if ((*iter).getStringValue() == "PRINT") {  // COMMAND: PRINT
             // only accepts literals / variables
             ++iter;
-            if(token_stream.size() != 2){
+            if (token_stream.size() != 2) {
                 throw std::runtime_error("SYNTAX ERROR: PRINT MUST BE FOLLOWED BY ONLY ONE VARIABLE/LITERAL");
             }
 
             token_class iter_token_class = (*iter).getTokenClass();
             variable_type iter_variable_type = (*iter).getVariableType();
-            if(iter_token_class == tkn_Integer){
+            if (iter_token_class == tkn_Integer) {
                 int iter_value = (*iter).getValue().val.int_val;
-                std::cout << "SNOL> [" << iter_value << "] = " << iter_value; 
-            }else if(iter_token_class == tkn_Float){
+                std::cout << "SNOL> [" << iter_value << "] = " << iter_value;
+            } else if (iter_token_class == tkn_Float) {
                 float iter_value = (*iter).getValue().val.float_val;
-                std::cout << "SNOL> [" << iter_value << "] = " << iter_value; 
-            }else if(iter_token_class == tkn_Variable){
-                if(iter_variable_type == var_undeclared){
+                std::cout << "SNOL> [" << iter_value << "] = " << iter_value;
+            } else if (iter_token_class == tkn_Variable) {
+                if (iter_variable_type == var_undeclared) {
                     throw std::runtime_error("SYNTAX ERROR: VARIABLE IN PRINT IS UNDECLARED");
-                }else if(iter_variable_type == var_Integer){
+                } else if (iter_variable_type == var_Integer) {
                     float iter_value = (*iter).getValue().val.int_val;
-                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value; 
-                }else if(iter_variable_type == var_Float){
+                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value;
+                } else if (iter_variable_type == var_Float) {
                     float iter_value = (*iter).getValue().val.float_val;
-                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value; 
+                    std::cout << "SNOL> [" << (*iter).getStringValue() << "] = " << iter_value;
                 }
-            }else{
+            } else {
                 throw std::runtime_error("SYNTAX ERROR: DISALLOWED TOKEN TYPE AFTER PRINT COMMAND");
             }
         }
@@ -332,6 +345,7 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
                 temp_token_stream.push_back(*iter);
             }
             variable_assignment(token_to_assign_ptr, expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream)));
+
         } else {
             throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
         }
@@ -404,7 +418,7 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
                 throw std::runtime_error("SYNTAX ERROR. MODULO (%) OPERATION IS ONLY ALLOWED BETWEEN INTs");
             }
         }
-        expect_operand = !expect_operand; // flip scritp
+        expect_operand = !expect_operand;  // flip scritp
     }
 
     // i know this check isn't necessary but i am still paranoid

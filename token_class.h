@@ -102,20 +102,12 @@ class Token {
     }
 
     void declareVar(int value) {
-        if (tokenClass == tkn_Variable) {
-            intValue = value;
-            variableType = var_Integer;
-        } else {
-            intValue = value;
-        }  // hee hee hoo might be bad
+        intValue = value;
+        variableType = var_Integer;
     }
 
     void declareVar(float value) {
-        if (tokenClass == tkn_Variable) {
-            floatValue = value;
-            variableType = var_Float;
-        } else {
-            floatValue = value;
-        }
+        floatValue = value;
+        variableType = var_Float;
     }
 };
