@@ -14,7 +14,8 @@ enum token_state {
     state_float,
     state_string,
     state_operator,
-    state_no_state
+    state_no_state,
+    state_negative
 };
 
 //Function Prototypes
@@ -125,6 +126,8 @@ chr_type type_check(char inp) {
 std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspace) {
     std::vector<Token> token_stream;
     chr_type char_type;
+    token_state curr_state;
+    token_state prev_state; // only used in the case of no_state
 
     // ERROR CHECK 0: NO STRING
     if (input_string.empty()) {
@@ -151,11 +154,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
 
     char_type = type_check(input_string.front());
     if (char_type == chr_point || char_type == chr_operator) {
+        if((char_type == chr_operator && input_string.front() == '-')){
+            curr_state = state_negative;   
+        }
         throw std::runtime_error("SYNTAX ERROR: INVALD STARTING CHARACTER");
     }
 
     // curr_state: what the scanner assumes is the type of thing its getting.
-    token_state curr_state;
+    
 
     if (char_type == chr_number) {
         curr_state = state_integer;
@@ -171,7 +177,15 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     for (int pos = 1; pos < len; pos++) {
         char_type = type_check(input_string.at(pos));
         // Assign state to current char
-        if (curr_state == state_no_state) {
+        if (char_type == chr_space) {
+            if (!buffer.empty()) {
+                token_stream.push_back(tokenize(buffer, curr_state, varspace));
+                buffer = "";
+                prev_state = curr_state; // save previous state
+                curr_state = state_no_state;
+            }  // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY.
+            continue;
+        } else if (curr_state == state_no_state) { // SPECIAL CASE 1: MULTIPLE SPACES
             if (char_type == chr_letter) {
                 buffer += input_string.at(pos);
                 curr_state = state_string;
@@ -180,7 +194,13 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
                 curr_state = state_integer;
             } else if (char_type == chr_operator) {
                 buffer += input_string.at(pos);
-                curr_state = state_operator;
+                // NEEDS SPECIAL CHECKING: <OPER> <SPACE> <OPER>
+                // WAIT I HAVE OTHER CHECKS THIS IS WHAT BEING ROBUST GETS YOU
+                if(input_string.at(pos) == '-' && prev_state == state_operator){
+                    curr_state = state_negative;
+                }else{ // 
+                    curr_state = state_operator;
+                }
             } else if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: LONE POINT DETECTED");
             } else if (char_type == chr_space) {
@@ -188,14 +208,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
             } else {
                 throw std::runtime_error("LEXICAL ERROR: UNKNOWN ERROR OCCURED");
             }
-        } // SPACE IS A DELIMITER. CHANGE TYPE IMMEDIATELY.
-        else if (char_type == chr_space) {
-            if (!buffer.empty()) {
-                token_stream.push_back(tokenize(buffer, curr_state, varspace));
-                buffer = "";
-                curr_state = state_no_state;
+        
+        } else if (curr_state == state_negative){ // CORNER CASE 1: NEGATIVE NUMBERS
+            if(char_type == chr_number){ // only good if followed by a number
+                buffer += input_string.at(pos);
+                curr_state = state_integer;
+            }else{
+                throw std::runtime_error("LEXICAL ERROR - INVALID USE OF NEGATIVE SIGN");
             }
-            continue;
         } else if (curr_state == state_integer) {
             // ACTION 1: If alphanumeric add to buffer, and typecast to corresponding state
             // ACTION 2: tokenize and clear buffer, change type
@@ -238,8 +258,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
                 throw std::runtime_error("LEXICAL ERROR: POINTS CANNOT FOLLOW OPERATORS.");
 
             } else if (char_type == chr_operator) {
-                throw std::runtime_error("LEXICAL ERROR: DOUBLED OPERATORS.");
-
+                if(input_string.at(pos) == '-'){ // handles + -1 kinda thing cause thats valid
+                    if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
+                    buffer.clear();
+                    buffer += input_string.at(pos);
+                    curr_state = state_negative;
+                }else{ // may or may not work
+                    throw std::runtime_error("LEXICAL ERROR: DOUBLED OPERATORS.");
+                }
             } else if (char_type == chr_letter) {
                 if (!buffer.empty()) token_stream.push_back(tokenize(buffer, curr_state, varspace));
                 buffer.clear();
