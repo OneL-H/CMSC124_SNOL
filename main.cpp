@@ -59,7 +59,7 @@ Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* vars
         if (temp.getTokenClass() == tkn_Command) {
             return temp;
         } else {
-            if((*varspace).empty()) return Token(inp);
+            if ((*varspace).empty()) return Token(inp);
 
             std::vector<Token>::iterator i;
             for (i = (*varspace).begin(); i != (*varspace).end(); ++i) {
@@ -350,36 +350,55 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
             }
         }
     } else if ((*iter).getTokenClass() == tkn_Variable) {
+        Token* var_to_assign = &(*iter);  // sotre iter before we increment it.
+
         ++iter;
+
         if ((*iter).getTokenClass() == tkn_Operator && (*iter).getStringValue() == "=") {
-            Token* token_to_assign_ptr = &(*iter);  // dereference and find address.
+            bool var_unassigned = (var_to_assign->getVariableType() == var_undeclared);
+
+            // REPLACE var_to_assign to the correct reference (the one in the varspace)
+            // A FIX. THE TOKEN IS INDEPENDENT TO THE ONE IN THE VARSPACE. SEARCH FOR THE CORRECT ONE TO ASSIGN!
+            if (!var_unassigned) {
+                std::vector<Token>::iterator varspace_iter = variable_space->begin();
+                for (; varspace_iter != variable_space->end(); ++varspace_iter) {
+                    // check for matching names
+                    if (var_to_assign->getStringValue() == (*varspace_iter).getStringValue()) {
+                        var_to_assign = &(*varspace_iter);
+                        break;
+                    }  // change the reference of var_to_assign to the one in the varspace
+                }
+            }
+
             ++iter;
             std::vector<Token> temp_token_stream;
             for (; iter != token_stream.end(); ++iter) {
                 temp_token_stream.push_back(*iter);
             }
-            variable_assignment(token_to_assign_ptr, expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream)));
 
-        } else {
+            variable_assignment(var_to_assign, expression_evaluator(temp_token_stream, expr_prechecker(temp_token_stream)));
+
+            if (var_unassigned) {
+                (*variable_space).push_back(*var_to_assign);
+            }
+
+        } else if ((*iter).getTokenClass() == tkn_Operator) {
+            expr_prechecker(token_stream);
+        } else{
             throw std::runtime_error("SYNTAX ERROR: INVALID VARIABLE ASSIGNMENT/DECLARATION SCHEME");
         }
     } else {
-        ++iter;
-        std::vector<Token> temp_token_stream;
-        for (; iter != token_stream.end(); ++iter) {
-            temp_token_stream.push_back(*iter);
-        }
-        expr_prechecker(temp_token_stream);
+        expr_prechecker(token_stream);
     }
 }
 
 // returns a variable type if okay, throws error otherwise
 variable_type expr_prechecker(std::vector<Token> token_stream) {
     // CHECK 1: VALID BEGINNING / ENDING
-    Token beg = *token_stream.begin();  // i am smort
-    Token end = *token_stream.end();
+    Token beg = token_stream.front();  // i am smort
+    Token end = token_stream.back();
     token_class beg_class = beg.getTokenClass();
-    token_class end_class = beg.getTokenClass();
+    token_class end_class = end.getTokenClass();
     if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable)) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST BEGIN WITH A VALID OPERAND");
     }
@@ -399,8 +418,8 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     bool expect_operand = true;
     for (std::vector<Token>::iterator i = token_stream.begin(); i != token_stream.end(); ++i) {
         if (expect_operand) {
-            // expect operand. expect integer, float, or variable
-            if (!((*i).getTokenClass() == tkn_Integer || (*i).getTokenClass() == tkn_Float || (*i).getTokenClass() == tkn_Operator)) {
+            // not integer, not float and not variable, send error
+            if (!((*i).getTokenClass() == tkn_Integer || (*i).getTokenClass() == tkn_Float || (*i).getTokenClass() == tkn_Variable)) {
                 std::string error_msg = "SYNTAX ERROR. EXPECTED OPERAND SAW " + (*i).getTokenClass();
                 throw std::runtime_error(error_msg);
             }
