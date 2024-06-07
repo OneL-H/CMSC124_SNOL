@@ -519,12 +519,12 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     Token end = token_stream.back();
     token_class beg_class = beg.getTokenClass();
     token_class end_class = end.getTokenClass();
-    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable || beg_class == tkn_Operator)) {
-        throw std::runtime_error("here");
+    if (!(beg_class == tkn_Integer || beg_class == tkn_Float || beg_class == tkn_Variable )) {
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
     if (!(end_class == tkn_Integer || end_class == tkn_Float || end_class == tkn_Variable)) {
+
         throw std::runtime_error("SYNTAX ERROR. EXPRESSION MUST END WITH A VALID OPERAND");
     }
 
