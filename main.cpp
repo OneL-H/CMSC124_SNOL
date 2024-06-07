@@ -63,6 +63,11 @@ Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* vars
         if (temp.getTokenClass() == tkn_Command) {
             return temp;
         } else {
+            // bullshit check to prevent use of exclamation point use
+            if(temp.getStringValue().find('!') != std::string::npos){
+                throw std::runtime_error("SYNTAX ERROR - INVALID CHARACTER IN VARIABLE");
+            } // this is probably okay since we know its not EXIT!
+
             if ((*varspace).empty()) return Token(inp);
 
             std::vector<Token>::iterator i;
