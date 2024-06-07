@@ -33,11 +33,14 @@ int main() {
 
     while (true) {
         std::string inp;
-        std::cout << "\n\nREQUESTING INPUT: ";
+        std::cout << "\nREQUESTING INPUT: ";
         std::getline(std::cin, inp);
         try {
             std::vector<Token> token_stream1 = scanner(inp, &variable_space);
             identifier_prechecker(token_stream1, &variable_space);
+        } catch (std::bad_alloc){
+            std::cout << "\nIT SEEMS YOUR COMPUTER IS OUT OF MEMORY. (std::bad_alloc) TERMINATING PROGRAM TO ALLEVIATE...";
+            exit_snol();
         } catch (const std::exception& e) {
             std::cout << "SNOL> ERROR CAUGHT - " << e.what() << '\n';
         }
