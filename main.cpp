@@ -1,7 +1,4 @@
 #include <string.h>
-
-#include <stdexcept>
-
 #include "token_class.h"
 
 enum chr_type {
@@ -24,16 +21,20 @@ Token tokenize(std::string inp, std::string curr_state, std::vector<Token>* vars
 chr_type type_check(char inp);
 std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspace);
 void exit_snol();
+void variable_assignment(Token* var, Token result);
 void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* variable_space);
+std::string token_class_to_string(token_class tkn);
 variable_type expr_prechecker(std::vector<Token> token_stream);
 Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type);
 
 int main() {
     std::vector<Token> variable_space;
 
+    std::cout << "SNOL ENVIRONMENT NOW ACTIVE. READY TO RECIEVE COMMANDS.";
+
     while (true) {
         std::string inp;
-        std::cout << "\nREQUESTING INPUT: ";
+        std::cout << "\nCOMMAND: ";
         std::getline(std::cin, inp);
         try {
             std::vector<Token> token_stream1 = scanner(inp, &variable_space);
@@ -79,7 +80,6 @@ Token tokenize(std::string inp, token_state curr_state, std::vector<Token>* vars
 }
 
 // returns the four things a character can be
-
 chr_type type_check(char inp) {
     if (isalpha(inp) || inp == '!') {
         return chr_letter;
@@ -147,12 +147,14 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
         char_type = type_check(input_string.at(pos));
 
         if (curr_state == state_no_state) {
-            buffer += input_string.at(pos);
             if (char_type == chr_letter) {
+                buffer += input_string.at(pos);
                 curr_state = state_string;
             } else if (char_type == chr_number) {
+                buffer += input_string.at(pos);
                 curr_state = state_integer;
             } else if (char_type == chr_operator) {
+                buffer += input_string.at(pos);
                 curr_state = state_operator;
             } else if (char_type == chr_point) {
                 throw std::runtime_error("LEXICAL ERROR: LONE POINT DETECTED");
@@ -241,11 +243,13 @@ std::vector<Token> scanner(std::string input_string, std::vector<Token>* varspac
     return token_stream;
 }
 
+// exit function cause why not
 void exit_snol() {
     std::cout << "\nInterpreter is now terminated...";
     exit(0);
 }
 
+// routine for assigning variables automagically
 void variable_assignment(Token* var, Token result) {
     if (result.getTokenClass() == tkn_Integer) {
         var->declareVar(result.getValue().val.int_val);
@@ -277,7 +281,6 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
             exit_snol();
         } else if ((*iter).getStringValue() == "BEG") {  // COMMAND: BEG
             ++iter;                                      // increment iter. its now on the second to
-            std::cout << token_stream.size();
             if ((*iter).getTokenClass() == tkn_Variable && token_stream.size() == 2) {
                 // check here is (its a variable) AND (its the end)
 
@@ -393,6 +396,7 @@ void identifier_prechecker(std::vector<Token> token_stream, std::vector<Token>* 
     }
 }
 
+// this is here to support error message sending
 std::string token_class_to_string(token_class tkn){
     switch (tkn)
     {
@@ -492,7 +496,7 @@ variable_type expr_prechecker(std::vector<Token> token_stream) {
     return expr_type;
 }
 
-// evaluates a valid token stream
+// evaluates a valid token stream, returns result token
 Token expression_evaluator(std::vector<Token> token_stream, variable_type expr_type) {
     // this is a horribly lazy method for expression evaluation because there's
     // no parentheses in the language description

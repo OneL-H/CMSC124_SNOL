@@ -1,5 +1,4 @@
 #include <iostream>
-#include <variant>
 #include <vector>
 
 enum token_class {
